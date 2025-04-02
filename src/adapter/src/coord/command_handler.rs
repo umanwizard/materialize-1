@@ -75,11 +75,33 @@ use crate::{catalog, metrics, AppendWebhookError, ExecuteContext, TimestampProvi
 
 use super::ExecuteContextExtra;
 
+impl Command {
+    fn username(&self) -> Option<&str> {
+        match self {
+            Command::Startup { user, .. } => Some(user.name()),
+            Command::Execute { session, .. } => Some(&session.user().name),
+            Command::Commit { session, .. } => Some(&session.user().name),
+            _ => None,
+        }
+    }
+}
+
 impl Coordinator {
+    pub(crate) async fn handle_command(&mut self, cmd: Command) {
+        use custom_labels::asynchronous::Label;
+        let u = cmd.username().map(|u| u.to_owned());
+        let inner = self.handle_command_inner(cmd);
+        if let Some(u) = u {
+            inner.with_label("username", u).await
+        } else {
+            inner.await
+        }
+    }
     /// BOXED FUTURE: As of Nov 2023 the returned Future from this function was 58KB. This would
     /// get stored on the stack which is bad for runtime performance, and blow up our stack usage.
     /// Because of that we purposefully move this Future onto the heap (i.e. Box it).
-    pub(crate) fn handle_command(&mut self, mut cmd: Command) -> LocalBoxFuture<()> {
+    fn handle_command_inner(&mut self, mut cmd: Command) -> LocalBoxFuture<()> {
+        let u = cmd.username().map(|u| u.to_owned());
         async move {
             if let Some(session) = cmd.session_mut() {
                 session.apply_external_metadata_updates();

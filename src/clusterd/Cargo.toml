@@ -42,6 +42,7 @@ tokio = { version = "1.44.1", features = ["fs", "rt", "sync", "test-util"] }
 tower = "0.4.13"
 tracing = "0.1.37"
 workspace-hack = { version = "0.0.0", path = "../workspace-hack", optional = true }
+custom-labels = "0.4.0"
 
 [features]
 default = ["tokio-console", "mz-alloc-default", "workspace-hack"]

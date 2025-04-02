@@ -16,6 +16,8 @@ fn main() -> Result<(), anyhow::Error> {
         .file("src/environmentd/sys.c")
         .compile("environmentd_sys");
 
+    custom_labels::build::emit_build_instructions();
+
     let out_dir = std::env::var("OUT_DIR").ok().map(std::path::PathBuf::from);
     mz_npm::ensure(out_dir)
 }

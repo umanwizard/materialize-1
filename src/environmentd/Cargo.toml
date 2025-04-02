@@ -116,6 +116,7 @@ tungstenite = { version = "0.21.0" }
 url = "2.3.1"
 uuid = "1.16.0"
 workspace-hack = { version = "0.0.0", path = "../workspace-hack", optional = true }
+custom-labels = "0.4.0"
 
 [dev-dependencies]
 assert_cmd = "2.0.5"
@@ -150,6 +151,7 @@ timely = "0.19.0"
 tokio-postgres = { version = "0.7.8", features = ["with-chrono-0_4"] }
 
 [build-dependencies]
+custom-labels = "0.4.0"
 anyhow = "1.0.95"
 cc = "1.0.78"
 mz-npm = { path = "../npm" }

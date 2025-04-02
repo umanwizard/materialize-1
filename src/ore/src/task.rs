@@ -191,13 +191,9 @@ impl<T: Send> JoinHandleExt<T> for AbortOnDropHandle<T> {
     }
 }
 
-/// Spawns a new asynchronous task with a name.
-///
-/// See [`tokio::task::spawn`] and the [module][`self`] docs for more
-/// information.
 #[cfg(not(tokio_unstable))]
 #[track_caller]
-pub fn spawn<Fut, Name, NameClosure>(_nc: NameClosure, future: Fut) -> JoinHandle<Fut::Output>
+fn spawn_inner<Fut, Name, NameClosure>(_nc: NameClosure, future: Fut) -> JoinHandle<Fut::Output>
 where
     Name: AsRef<str>,
     NameClosure: FnOnce() -> Name,
@@ -208,13 +204,9 @@ where
     JoinHandle(tokio::spawn(future))
 }
 
-/// Spawns a new asynchronous task with a name.
-///
-/// See [`tokio::task::spawn`] and the [module][`self`] docs for more
-/// information.
 #[cfg(tokio_unstable)]
 #[track_caller]
-pub fn spawn<Fut, Name, NameClosure>(nc: NameClosure, future: Fut) -> JoinHandle<Fut::Output>
+fn spawn_inner<Fut, Name, NameClosure>(nc: NameClosure, future: Fut) -> JoinHandle<Fut::Output>
 where
     Name: AsRef<str>,
     NameClosure: FnOnce() -> Name,
@@ -230,6 +222,25 @@ where
     )
 }
 
+/// Spawns a new asynchronous task with a name.
+///
+/// See [`tokio::task::spawn`] and the [module][`self`] docs for more
+/// information.
+#[track_caller]
+pub fn spawn<Fut, Name, NameClosure>(nc: NameClosure, future: Fut) -> JoinHandle<Fut::Output>
+where
+    Name: AsRef<str>,
+    NameClosure: FnOnce() -> Name,
+    Fut: Future + Send + 'static,
+    Fut::Output: Send + 'static,
+{
+    use custom_labels::asynchronous::Label;
+    match custom_labels::Labelset::try_clone_from_current() {
+        None => spawn_inner(nc, future),
+        Some(ls) => spawn_inner(nc, future.with_labelset(ls)),
+    }
+}
+
 /// Runs the provided closure with a name on a thread where blocking is
 /// acceptable.
 ///
@@ -238,7 +249,7 @@ where
 #[cfg(not(tokio_unstable))]
 #[track_caller]
 #[allow(clippy::disallowed_methods)]
-pub fn spawn_blocking<Function, Output, Name, NameClosure>(
+fn spawn_blocking_inner<Function, Output, Name, NameClosure>(
     _nc: NameClosure,
     function: Function,
 ) -> JoinHandle<Output>
@@ -259,7 +270,7 @@ where
 #[cfg(tokio_unstable)]
 #[track_caller]
 #[allow(clippy::disallowed_methods)]
-pub fn spawn_blocking<Function, Output, Name, NameClosure>(
+fn spawn_blocking_inner<Function, Output, Name, NameClosure>(
     nc: NameClosure,
     function: Function,
 ) -> JoinHandle<Output>
@@ -275,6 +286,23 @@ where
             .spawn_blocking(function)
             .expect("task spawning cannot fail"),
     )
+}
+
+#[track_caller]
+pub fn spawn_blocking<Function, Output, Name, NameClosure>(
+    nc: NameClosure,
+    function: Function,
+) -> JoinHandle<Output>
+where
+    Name: AsRef<str>,
+    NameClosure: FnOnce() -> Name,
+    Function: FnOnce() -> Output + Send + 'static,
+    Output: Send + 'static,
+{
+    match custom_labels::Labelset::try_clone_from_current() {
+        None => spawn_blocking_inner(nc, function),
+        Some(mut ls) => spawn_blocking_inner(nc, move || ls.enter(function)),
+    }
 }
 
 /// Extension methods for [`Runtime`] and [`Handle`].

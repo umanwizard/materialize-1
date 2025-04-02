@@ -27,6 +27,7 @@ use mz_persist_client::usage::ShardsUsageReferenced;
 use mz_repr::{Datum, Row};
 use mz_sql::ast::Statement;
 use mz_sql::pure::PurifiedStatement;
+use mz_sql::session::metadata::SessionMetadata;
 use mz_storage_client::controller::IntrospectionType;
 use mz_storage_types::controller::CollectionMetadata;
 use opentelemetry::trace::TraceContextExt;
@@ -46,12 +47,28 @@ use crate::telemetry::{EventDetails, SegmentClientExt};
 use crate::{AdapterNotice, TimestampContext};
 
 impl Coordinator {
+    pub(crate) async fn handle_message(&mut self, msg: Message) {
+        let u = match msg {
+            Message::ExecuteSingleStatementTransaction { ref ctx, .. } => {
+                Some(ctx.session().user().name.clone())
+            }
+            Message::PeekStageReady { ref ctx, .. } => Some(ctx.session().user().name.clone()),
+            _ => None,
+        };
+        let inner = self.handle_message_inner(msg);
+        use custom_labels::asynchronous::Label;
+        if let Some(u) = u {
+            inner.with_label("username", &u).await;
+        } else {
+            inner.await;
+        };
+    }
     /// BOXED FUTURE: As of Nov 2023 the returned Future from this function was 74KB. This would
     /// get stored on the stack which is bad for runtime performance, and blow up our stack usage.
     /// Because of that we purposefully move Futures of inner function calls onto the heap
     /// (i.e. Box it).
     #[instrument]
-    pub(crate) async fn handle_message(&mut self, msg: Message) -> () {
+    pub(crate) async fn handle_message_inner(&mut self, msg: Message) -> () {
         match msg {
             Message::Command(otel_ctx, cmd) => {
                 // TODO: We need a Span that is not none for the otel_ctx to attach the parent

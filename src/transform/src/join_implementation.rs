@@ -16,6 +16,7 @@
 //! determining the orders of collections, lifting predicates if useful arrangements exist,
 //! and identifying opportunities to use indexes to replace filters.
 
+use core::time::Duration;
 use std::collections::BTreeMap;
 
 use mz_expr::visit::{Visit, VisitChildren};
@@ -155,6 +156,11 @@ impl JoinImplementation {
             implementation: implementation @ (Unimplemented | Differential(..)),
         } = relation
         {
+            if let Unimplemented = implementation {
+                let now = std::time::Instant::now();
+                while now.elapsed() < Duration::from_millis(100) {}
+                println!("Hi!");
+            }
             // If we eagerly plan delta joins, we don't need the second run to "pick up" delta joins
             // that could be planned with the arrangements from a differential. If such a delta
             // join were viable, we'd have already planned it the first time.
