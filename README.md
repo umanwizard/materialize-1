@@ -1,3 +1,5 @@
+**https://github.com/parca-dev/opentelemetry-ebpf-profiler/pull/58 needs to land before this will work**
+
 This is a demo of Materialize using the Custom Labels feature from Parca/Polar Signals.
 
 The demo fixes `mz_ore::task` to propagate labels to new tasks, and also initially sets a label
