@@ -2219,7 +2219,9 @@ checksum = "4f211af61d8efdd104f96e57adf5e426ba1bc3ed7a4ead616e15e5881fd79c4d"
 
 [[package]]
 name = "custom-labels"
-version = "0.4.0"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6ef277698f64d29f2547c68fd21eba5b853ab6eb54af5de61bc19b3da74c36f4"
 dependencies = [
  "bindgen 0.70.1",
  "cc",
@@ -5238,7 +5240,6 @@ dependencies = [
  "anyhow",
  "axum",
  "clap",
- "custom-labels",
  "fail",
  "futures",
  "hyper 1.4.1",
